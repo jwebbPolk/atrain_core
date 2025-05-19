@@ -35,12 +35,9 @@ def create_file_id(file_path, timestamp):
 
 
 def create_output_files(result, speaker_detection, file_id):
-    """Creates output files based on the transcription result."""
-    create_json_file(result, file_id)
-    create_txt_file(result, file_id, speaker_detection, maxqda=False, timestamps=False)
-    create_txt_file(result, file_id, speaker_detection, maxqda=False, timestamps=True)
-    create_txt_file(result, file_id, speaker_detection, maxqda=True, timestamps=True)
-    create_srt_file(result, file_id)
+    """Creates only the plain text transcription file."""
+    create_txt_file(result, file_id, speaker_detection, timestamps=False, maxqda=False)
+
 
 
 def create_json_file(result, file_id):
