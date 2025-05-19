@@ -40,11 +40,12 @@ def create_output_files(result, speaker_detection, file_id):
 
 
 def create_txt_file(result, file_id, speaker_detection, timestamps, maxqda):
-    """Creates a TXT file for the transcription result."""
+    """Creates a TXT file for the transcription result, grouping text by speaker."""
     segments = result["segments"]
-    # Always use transcription.txt regardless of parameters
     filename = "transcription.txt"
+    
     file_path = os.path.join(TRANSCRIPT_DIR, file_id, filename)
+    
     with open(file_path, "w", encoding="utf-8") as file:
         headline = (
             f"Transcription for {file_id}"
@@ -52,17 +53,51 @@ def create_txt_file(result, file_id, speaker_detection, timestamps, maxqda):
             + ("" if speaker_detection else "\n")
         )
         file.write(headline)
-        current_speaker = None
-        for segment in segments:
-            speaker = (
-                segment["speaker"] if "speaker" in segment else "Speaker undefined"
-            )
-            if speaker != current_speaker and speaker_detection:
-                file.write(("\n\n" if maxqda else "\n") + speaker + "\n")
-                current_speaker = speaker
-            text = str(segment["text"]).lstrip()
-            # Ignore timestamps parameter - never add timestamps
-            file.write(text + (" " if maxqda else "\n"))
+        
+        # Group segments by speaker
+        if speaker_detection:
+            # Initialize variables
+            current_speaker = None
+            speaker_texts = []
+            
+            # Process all segments
+            for segment in segments:
+                speaker = segment["speaker"] if "speaker" in segment else "Speaker undefined"
+                text = str(segment["text"]).lstrip()
+                
+                if timestamps:
+                    start_time = time.strftime("[%H:%M:%S]", time.gmtime(segment["start"]))
+                    text = f"{start_time} - {text}"
+                
+                # If this is a new speaker, write the previous speaker's text
+                if speaker != current_speaker:
+                    # Write the previous speaker's text if it exists
+                    if current_speaker is not None and speaker_texts:
+                        file.write(("\n\n" if maxqda else "\n") + current_speaker + ": ")
+                        # Join all the speaker's text with spaces instead of newlines
+                        combined_text = " ".join(speaker_texts)
+                        file.write(combined_text + (" " if maxqda else "\n"))
+                    
+                    # Reset for the new speaker
+                    current_speaker = speaker
+                    speaker_texts = [text]
+                else:
+                    # Add this text to the current speaker
+                    speaker_texts.append(text)
+            
+            # Write the last speaker's text
+            if current_speaker is not None and speaker_texts:
+                file.write(("\n\n" if maxqda else "\n") + current_speaker + ": ")
+                combined_text = " ".join(speaker_texts)
+                file.write(combined_text + (" " if maxqda else "\n"))
+        else:
+            # If no speaker detection, just write each segment on its own line
+            for segment in segments:
+                text = str(segment["text"]).lstrip()
+                if timestamps:
+                    start_time = time.strftime("[%H:%M:%S]", time.gmtime(segment["start"]))
+                    text = f"{start_time} - {text}"
+                file.write(text + (" " if maxqda else "\n"))
 
 
 
